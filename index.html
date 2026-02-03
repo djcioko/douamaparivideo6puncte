@@ -3,10 +3,16 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Studio Mapper V40 - Dual Video GitHub</title>
+    <title>Studio Mapper V40 - Dual Video & Device Switcher</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
+    <div id="device-switcher">
+        <button onclick="setView('desktop')">💻 Desktop Mode</button>
+        <button onclick="setView('mobile')">📱 Smartphone Mode</button>
+        <span id="res-indicator">Mod: Desktop (Full)</span>
+    </div>
+
     <div id="app-container">
         <canvas id="canvas"></canvas>
     </div>
@@ -22,7 +28,7 @@
         <label>VIDEO 2 (Trage de mijloc):</label>
         <input type="file" id="video2Input" accept="video/*" class="btn">
         
-        <button class="btn" onclick="resetPoints()" style="margin-top:20px; color:#ff4444;">RESET CONFIG</button>
+        <button class="btn" onclick="resetPoints()" style="margin-top:20px; color:#ff4444; font-weight:bold;">RESET CONFIG</button>
     </div>
 
     <div id="bottom-bar">
