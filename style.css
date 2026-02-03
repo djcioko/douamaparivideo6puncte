@@ -1,23 +1,35 @@
 body { margin: 0; background: #000; overflow: hidden; font-family: 'Segoe UI', sans-serif; }
-#app-container { position: relative; width: 100vw; height: 100vh; cursor: default; }
-canvas { width: 100%; height: 100%; display: block; }
+#app-container { position: relative; width: 100vw; height: 100vh; padding-top: 35px; box-sizing: border-box; display: flex; justify-content: center; }
+canvas { background: #050505; display: block; box-shadow: 0 0 20px rgba(0,255,255,0.1); }
 
+/* Bara de sus tip WebSim */
+#device-switcher {
+    position: fixed; top: 0; left: 0; width: 100%; height: 35px;
+    background: #111; border-bottom: 1px solid #333;
+    display: flex; justify-content: center; align-items: center; gap: 20px; z-index: 3000;
+}
+#device-switcher button {
+    background: #222; color: white; border: 1px solid #444;
+    padding: 3px 12px; cursor: pointer; font-size: 11px; border-radius: 4px; text-transform: uppercase;
+}
+#device-switcher button:hover { border-color: #00ffff; color: #00ffff; }
+#res-indicator { color: gold; font-size: 11px; font-family: monospace; font-weight: bold; }
+
+/* Meniu Lateral */
 #controls { 
-    position: fixed; left: 10px; top: 10px; width: 220px; 
+    position: fixed; left: 10px; top: 50px; width: 220px; 
     background: rgba(0,0,0,0.9); color: #00ffff; padding: 15px; 
     z-index: 2000; border: 1px solid #444; border-radius: 8px;
-    transition: transform 0.3s ease;
 }
-.hidden { transform: translateX(-250px); }
+.hidden { display: none !important; }
 
-h3 { margin: 0 0 10px; font-size: 14px; text-transform: uppercase; color: gold; border-bottom: 1px solid #333; padding-bottom: 5px; }
+h3 { margin: 0 0 10px; font-size: 13px; text-transform: uppercase; color: gold; border-bottom: 1px solid #333; padding-bottom: 5px; }
 label { font-size: 10px; display: block; margin-top: 10px; color: #fff; font-weight: bold; }
 .btn { width: 100%; margin-top: 5px; padding: 8px; background: #222; color: white; border: 1px solid #555; cursor: pointer; font-size: 10px; border-radius: 4px; }
-.btn:hover { background: #333; border-color: #00ffff; }
 
+/* Bara de jos */
 #bottom-bar { 
-    position: fixed; bottom: 0; left: 0; width: 100%; height: 45px; 
-    background: rgba(15,15,15,0.95); display: flex; justify-content: center; align-items: center; gap: 15px; z-index: 2001; border-top: 1px solid #333;
+    position: fixed; bottom: 0; left: 0; width: 100%; height: 40px; 
+    background: rgba(10,10,10,0.95); display: flex; justify-content: center; align-items: center; gap: 15px; z-index: 2001; border-top: 1px solid #333;
 }
-.b-btn { background: #333; color: #aaa; border: 1px solid #555; padding: 6px 15px; cursor: pointer; font-size: 11px; border-radius: 4px; font-weight: bold; }
-.b-btn:hover { color: #fff; border-color: #00ffff; }
+.b-btn { background: #333; color: #aaa; border: 1px solid #555; padding: 5px 15px; cursor: pointer; font-size: 10px; border-radius: 4px; font-weight: bold; }
