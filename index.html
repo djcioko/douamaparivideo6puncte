@@ -3,14 +3,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Studio Mapper V40 - Dual Video & Device Switcher</title>
+    <title>Studio Mapper V40 - Final</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
     <div id="device-switcher">
-        <button onclick="setView('desktop')">💻 Desktop Mode</button>
-        <button onclick="setView('mobile')">📱 Smartphone Mode</button>
-        <span id="res-indicator">Mod: Desktop (Full)</span>
+        <button onclick="setView('desktop')" class="mode-btn">💻 DESKTOP</button>
+        <button onclick="setView('mobile')" class="mode-btn">📱 SMARTPHONE</button>
+        <div id="res-indicator">MOD: DESKTOP</div>
     </div>
 
     <div id="app-container">
@@ -19,16 +19,13 @@
 
     <div id="controls">
         <h3>Studio Mapper V40</h3>
-        <label>MEDIA FUNDAL (Decor):</label>
+        <label>DECOR FUNDAL:</label>
         <input type="file" id="bgInput" accept="image/*" class="btn">
-        
-        <label>VIDEO 1 (Trage de mijloc):</label>
+        <label>VIDEO 1:</label>
         <input type="file" id="video1Input" accept="video/*" class="btn">
-        
-        <label>VIDEO 2 (Trage de mijloc):</label>
+        <label>VIDEO 2:</label>
         <input type="file" id="video2Input" accept="video/*" class="btn">
-        
-        <button class="btn" onclick="resetPoints()" style="margin-top:20px; color:#ff4444; font-weight:bold;">RESET CONFIG</button>
+        <button class="btn" onclick="resetPoints()" style="margin-top:20px; color:red; font-weight:bold;">RESET CONFIG</button>
     </div>
 
     <div id="bottom-bar">
