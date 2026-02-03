@@ -2,180 +2,38 @@
 <html lang="ro">
 <head>
     <meta charset="UTF-8">
-    <title>Studio Mapper V40 - Dual Video & Drag</title>
-    <style>
-        body { margin: 0; background: #000; overflow: hidden; font-family: sans-serif; }
-        #app-container { position: relative; width: 100vw; height: 100vh; }
-        canvas { width: 100%; height: 100%; display: block; }
-        
-        #controls { 
-            position: fixed; left: 10px; top: 10px; width: 220px; 
-            background: rgba(0,0,0,0.9); color: #00ffff; padding: 15px; 
-            z-index: 2000; border: 1px solid #444; border-radius: 8px;
-        }
-        .hidden { display: none !important; }
-        h3 { margin: 0 0 10px; font-size: 14px; text-transform: uppercase; color: gold; }
-        label { font-size: 10px; display: block; margin-top: 8px; color: #fff; }
-        .btn { width: 100%; margin-top: 5px; padding: 6px; background: #222; color: white; border: 1px solid #555; cursor: pointer; font-size: 10px; }
-        
-        #bottom-bar { 
-            position: fixed; bottom: 0; left: 0; width: 100%; height: 40px; 
-            background: #111; display: flex; justify-content: center; align-items: center; gap: 10px; z-index: 2001; 
-        }
-        .b-btn { background: #333; color: #ccc; border: 1px solid #555; padding: 5px 12px; cursor: pointer; font-size: 10px; }
-    </style>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Studio Mapper V40 - Dual Video GitHub</title>
+    <link rel="stylesheet" href="style.css">
 </head>
 <body>
+    <div id="app-container">
+        <canvas id="canvas"></canvas>
+    </div>
 
-<div id="app-container">
-    <canvas id="canvas"></canvas>
-</div>
-
-<div id="controls">
-    <h3>Studio Mapper V40</h3>
-    <label>FUNDAL (CAMERĂ/DECOR):</label>
-    <input type="file" id="bgInput" accept="image/*" class="btn">
-    
-    <label>VIDEO 1 (TRAGE DE MIJLOC):</label>
-    <input type="file" id="video1Input" accept="video/*" class="btn">
-    
-    <label>VIDEO 2 (TRAGE DE MIJLOC):</label>
-    <input type="file" id="video2Input" accept="video/*" class="btn">
-    
-    <button class="btn" onclick="resetPoints()" style="margin-top:15px; color:red;">RESET CONFIG</button>
-</div>
-
-<div id="bottom-bar">
-    <button class="b-btn" onclick="toggleDots()">DOTS: ON/OFF</button>
-    <button class="b-btn" onclick="toggleUI()">MENU: ON/OFF</button>
-</div>
-
-<video id="vid1" loop muted playsinline style="display:none"></video>
-<video id="vid2" loop muted playsinline style="display:none"></video>
-
-<script>
-const canvas = document.getElementById('canvas');
-const ctx = canvas.getContext('2d');
-const v1 = document.getElementById('vid1');
-const v2 = document.getElementById('vid2');
-let backgroundImg = new Image();
-
-let showUI = true;
-let showDots = true;
-
-// Configurație 6 puncte per video (toate Cyan pentru vizibilitate)
-let layers = {
-    v1: {
-        pts: [{x:100,y:100}, {x:300,y:100}, {x:500,y:100}, {x:100,y:400}, {x:300,y:400}, {x:500,y:400}],
-        active: false
-    },
-    v2: {
-        pts: [{x:600,y:100}, {x:800,y:100}, {x:1000,y:100}, {x:600,y:400}, {x:800,y:400}, {x:1000,y:400}],
-        active: false
-    }
-};
-
-function init() {
-    canvas.width = window.innerWidth;
-    canvas.height = window.innerHeight;
-    
-    // Încarcă setările salvate conform cerinței
-    const saved = localStorage.getItem('v40_dual_mapper');
-    if(saved) {
-        const data = JSON.parse(saved);
-        layers.v1.pts = data.v1;
-        layers.v2.pts = data.v2;
-    }
-
-    setupEvents();
-    animate();
-}
-
-function setupEvents() {
-    document.getElementById('bgInput').onchange = (e) => {
-        if(e.target.files[0]) backgroundImg.src = URL.createObjectURL(e.target.files[0]);
-    };
-    document.getElementById('video1Input').onchange = (e) => {
-        if(e.target.files[0]) { v1.src = URL.createObjectURL(e.target.files[0]); v1.play(); layers.v1.active = true; }
-    };
-    document.getElementById('video2Input').onchange = (e) => {
-        if(e.target.files[0]) { v2.src = URL.createObjectURL(e.target.files[0]); v2.play(); layers.v2.active = true; }
-    };
-
-    let dragPt = null;
-    let dragLayer = null;
-    let offset = {x:0, y:0};
-
-    canvas.onmousedown = (e) => {
-        if(!showDots) return;
+    <div id="controls">
+        <h3>Studio Mapper V40</h3>
+        <label>MEDIA FUNDAL (Decor):</label>
+        <input type="file" id="bgInput" accept="image/*" class="btn">
         
-        // Verifică întâi punctele (Resize/Deformare)
-        for (let key in layers) {
-            layers[key].pts.forEach(p => {
-                if(Math.hypot(p.x - e.clientX, p.y - e.clientY) < 20) dragPt = p;
-            });
-        }
+        <label>VIDEO 1 (Trage de mijloc):</label>
+        <input type="file" id="video1Input" accept="video/*" class="btn">
+        
+        <label>VIDEO 2 (Trage de mijloc):</label>
+        <input type="file" id="video2Input" accept="video/*" class="btn">
+        
+        <button class="btn" onclick="resetPoints()" style="margin-top:20px; color:#ff4444;">RESET CONFIG</button>
+    </div>
 
-        // Dacă nu am prins un punct, verificăm dacă tragem de tot clipul (Drag mutare)
-        if(!dragPt) {
-            for (let key in layers) {
-                const p = layers[key].pts;
-                // Verificare simplă dacă click-ul e în zona clipului (între puncte)
-                if(e.clientX > p[0].x && e.clientX < p[2].x && e.clientY > p[0].y && e.clientY < p[3].y) {
-                    dragLayer = layers[key];
-                    offset.x = e.clientX;
-                    offset.y = e.clientY;
-                }
-            }
-        }
-    };
+    <div id="bottom-bar">
+        <button class="b-btn" onclick="toggleDots()">DOTS: ON/OFF</button>
+        <button class="b-btn" onclick="toggleUI()">MENU: ON/OFF</button>
+        <button class="b-btn" onclick="toggleFullScreen()">FULL SCREEN</button>
+    </div>
 
-    window.onmousemove = (e) => {
-        if(dragPt) {
-            dragPt.x = e.clientX;
-            dragPt.y = e.clientY;
-        } else if(dragLayer) {
-            let dx = e.clientX - offset.x;
-            let dy = e.clientY - offset.y;
-            dragLayer.pts.forEach(p => { p.x += dx; p.y += dy; });
-            offset.x = e.clientX;
-            offset.y = e.clientY;
-        }
-        if(dragPt || dragLayer) save();
-    };
+    <video id="vid1" loop muted playsinline crossorigin="anonymous" style="display:none"></video>
+    <video id="vid2" loop muted playsinline crossorigin="anonymous" style="display:none"></video>
 
-    window.onmouseup = () => { dragPt = null; dragLayer = null; };
-}
-
-function save() {
-    localStorage.setItem('v40_dual_mapper', JSON.stringify({ v1: layers.v1.pts, v2: layers.v2.pts }));
-}
-
-function drawLayer(video, pts) {
-    if(video.readyState < 2) return;
-    ctx.save();
-    ctx.beginPath();
-    ctx.moveTo(pts[0].x, pts[0].y); ctx.lineTo(pts[1].x, pts[1].y); ctx.lineTo(pts[2].x, pts[2].y);
-    ctx.lineTo(pts[5].x, pts[5].y); ctx.lineTo(pts[4].x, pts[4].y); ctx.lineTo(pts[3].x, pts[3].y);
-    ctx.closePath();
-    ctx.clip();
-    
-    const minX = Math.min(pts[0].x, pts[3].x);
-    const minY = Math.min(pts[0].y, pts[1].y);
-    const w = Math.max(pts[2].x, pts[5].x) - minX;
-    const h = Math.max(pts[3].y, pts[4].y, pts[5].y) - minY;
-    ctx.drawImage(video, minX, minY, w, h);
-    ctx.restore();
-}
-
-function animate() {
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    if(backgroundImg.src) ctx.drawImage(backgroundImg, 0, 0, canvas.width, canvas.height);
-    
-    drawLayer(v1, layers.v1.pts);
-    drawLayer(v2, layers.v2.pts);
-    
-    if(showDots) {
-        for(let key in layers) {
-            layers[key].pts.forEach(p => {
-                ctx.fillStyle = '#00
+    <script src="script.js"></script>
+</body>
+</html>
