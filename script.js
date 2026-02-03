@@ -3,79 +3,41 @@ const ctx = canvas.getContext('2d');
 const v1 = document.getElementById('vid1');
 const v2 = document.getElementById('vid2');
 let backgroundImg = new Image();
+let showUI = true, showDots = true, currentMode = 'desktop';
 
-let showUI = true;
-let showDots = true;
-
-// 6 puncte per video
 let layers = {
-    v1: {
-        pts: [{x:100,y:100}, {x:300,y:100}, {x:500,y:100}, {x:100,y:400}, {x:300,y:400}, {x:500,y:400}],
-        active: false
-    },
-    v2: {
-        pts: [{x:600,y:100}, {x:800,y:100}, {x:1000,y:100}, {x:600,y:400}, {x:800,y:400}, {x:1000,y:400}],
-        active: false
-    }
+    v1: { pts: [{x:50,y:50}, {x:200,y:50}, {x:350,y:50}, {x:50,y:300}, {x:200,y:300}, {x:350,y:300}] },
+    v2: { pts: [{x:400,y:50}, {x:550,y:50}, {x:700,y:50}, {x:400,y:300}, {x:550,y:300}, {x:700,y:300}] }
 };
 
-function init() {
-    resize();
-    // Memorează configurația [cite: 2026-01-15]
-    const saved = localStorage.getItem('v40_final_save');
-    if(saved) {
-        const data = JSON.parse(saved);
-        layers.v1.pts = data.v1;
-        layers.v2.pts = data.v2;
-    }
-    setupEvents();
-    requestAnimationFrame(animate);
-}
-
-function resize() {
-    if (canvas.style.width !== '100%') return; // Nu modifica daca e in mod mobil
-    canvas.width = window.innerWidth;
-    canvas.height = window.innerHeight;
-}
-
 function setView(type) {
+    currentMode = type;
     const resText = document.getElementById('res-indicator');
     if (type === 'mobile') {
         canvas.width = 390; canvas.height = 844;
         canvas.style.width = '390px'; canvas.style.height = '844px';
-        resText.innerText = "Mod: Smartphone (Vertical)";
+        resText.innerText = "MOD: SMARTPHONE (390x844)";
     } else {
+        canvas.width = window.innerWidth; canvas.height = window.innerHeight;
         canvas.style.width = '100%'; canvas.style.height = '100%';
-        resize();
-        resText.innerText = "Mod: Desktop (Full Screen)";
+        resText.innerText = "MOD: DESKTOP (FULL)";
     }
 }
 
 function setupEvents() {
-    window.addEventListener('resize', resize);
-    document.getElementById('bgInput').onchange = (e) => {
-        if(e.target.files[0]) backgroundImg.src = URL.createObjectURL(e.target.files[0]);
-    };
-    document.getElementById('video1Input').onchange = (e) => {
-        if(e.target.files[0]) { v1.src = URL.createObjectURL(e.target.files[0]); v1.play(); layers.v1.active = true; }
-    };
-    document.getElementById('video2Input').onchange = (e) => {
-        if(e.target.files[0]) { v2.src = URL.createObjectURL(e.target.files[0]); v2.play(); layers.v2.active = true; }
-    };
+    window.onresize = () => { if(currentMode === 'desktop') setView('desktop'); };
+    document.getElementById('bgInput').onchange = (e) => { if(e.target.files[0]) backgroundImg.src = URL.createObjectURL(e.target.files[0]); };
+    document.getElementById('video1Input').onchange = (e) => { if(e.target.files[0]) { v1.src = URL.createObjectURL(e.target.files[0]); v1.play(); }};
+    document.getElementById('video2Input').onchange = (e) => { if(e.target.files[0]) { v2.src = URL.createObjectURL(e.target.files[0]); v2.play(); }};
 
-    let dragPt = null;
-    let dragLayer = null;
-    let lastMouse = {x:0, y:0};
+    let dragPt = null, dragLayer = null, lastMouse = {x:0, y:0};
 
     canvas.onmousedown = (e) => {
         if(!showDots) return;
         const rect = canvas.getBoundingClientRect();
         const mouse = { x: (e.clientX - rect.left) * (canvas.width / rect.width), y: (e.clientY - rect.top) * (canvas.height / rect.height) };
-        
         for (let key in layers) {
-            layers[key].pts.forEach(p => {
-                if(Math.hypot(p.x - mouse.x, p.y - mouse.y) < 20) dragPt = p;
-            });
+            layers[key].pts.forEach(p => { if(Math.hypot(p.x - mouse.x, p.y - mouse.y) < 30) dragPt = p; });
         }
         if(!dragPt) {
             for (let key in layers) {
@@ -87,47 +49,35 @@ function setupEvents() {
     };
 
     window.onmousemove = (e) => {
+        if(!dragPt && !dragLayer) return;
         const rect = canvas.getBoundingClientRect();
         const mouse = { x: (e.clientX - rect.left) * (canvas.width / rect.width), y: (e.clientY - rect.top) * (canvas.height / rect.height) };
-        if(dragPt) {
-            dragPt.x = mouse.x; dragPt.y = mouse.y;
-        } else if(dragLayer) {
-            const dx = mouse.x - lastMouse.x; const dy = mouse.y - lastMouse.y;
-            dragLayer.pts.forEach(p => { p.x += dx; p.y += dy; });
-        }
-        if(dragPt || dragLayer) {
-            lastMouse = mouse;
-            localStorage.setItem('v40_final_save', JSON.stringify({ v1: layers.v1.pts, v2: layers.v2.pts }));
-        }
+        const dx = mouse.x - lastMouse.x, dy = mouse.y - lastMouse.y;
+        if(dragPt) { dragPt.x = mouse.x; dragPt.y = mouse.y; }
+        else if(dragLayer) { dragLayer.pts.forEach(p => { p.x += dx; p.y += dy; }); }
+        lastMouse = mouse;
+        localStorage.setItem('v40_final', JSON.stringify({ v1: layers.v1.pts, v2: layers.v2.pts }));
     };
     window.onmouseup = () => { dragPt = null; dragLayer = null; };
 }
 
 function animate() {
-    ctx.fillStyle = "black";
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
     if(backgroundImg.src) ctx.drawImage(backgroundImg, 0, 0, canvas.width, canvas.height);
-    
-    [ {v:v1, l:layers.v1}, {v:v2, l:layers.v2} ].forEach(obj => {
-        if(obj.v.readyState >= 2) {
+    [v1, v2].forEach((v, i) => {
+        if(v.readyState >= 2) {
+            const l = i === 0 ? layers.v1 : layers.v2;
             ctx.save(); ctx.beginPath();
-            ctx.moveTo(obj.l.pts[0].x, obj.l.pts[0].y); ctx.lineTo(obj.l.pts[1].x, obj.l.pts[1].y); ctx.lineTo(obj.l.pts[2].x, obj.l.pts[2].y);
-            ctx.lineTo(obj.l.pts[5].x, obj.l.pts[5].y); ctx.lineTo(obj.l.pts[4].x, obj.l.pts[4].y); ctx.lineTo(obj.l.pts[3].x, obj.l.pts[3].y);
-            ctx.closePath(); ctx.clip();
-            const minX = Math.min(obj.l.pts[0].x, obj.l.pts[3].x);
-            const minY = Math.min(obj.l.pts[0].y, obj.l.pts[1].y);
-            ctx.drawImage(obj.v, minX, minY, Math.max(obj.l.pts[2].x, obj.l.pts[5].x)-minX, Math.max(obj.l.pts[3].y, obj.l.pts[5].y)-minY);
+            ctx.moveTo(l.pts[0].x, l.pts[0].y); ctx.lineTo(l.pts[1].x, l.pts[1].y); ctx.lineTo(l.pts[2].x, l.pts[2].y);
+            ctx.lineTo(l.pts[5].x, l.pts[5].y); ctx.lineTo(l.pts[4].x, l.pts[4].y); ctx.lineTo(l.pts[3].x, l.pts[3].y);
+            ctx.clip();
+            const minX = Math.min(l.pts[0].x, l.pts[3].x), minY = Math.min(l.pts[0].y, l.pts[1].y);
+            ctx.drawImage(v, minX, minY, Math.max(l.pts[2].x, l.pts[5].x)-minX, Math.max(l.pts[3].y, l.pts[5].y)-minY);
             ctx.restore();
         }
     });
-
     if(showDots) {
-        for(let key in layers) {
-            layers[key].pts.forEach(p => {
-                ctx.fillStyle = '#00ffff'; ctx.beginPath(); ctx.arc(p.x, p.y, 10, 0, Math.PI*2); ctx.fill();
-                ctx.strokeStyle = 'white'; ctx.stroke();
-            });
-        }
+        for(let key in layers) layers[key].pts.forEach(p => { ctx.fillStyle = '#00ffff'; ctx.beginPath(); ctx.arc(p.x, p.y, 8, 0, Math.PI*2); ctx.fill(); });
     }
     requestAnimationFrame(animate);
 }
@@ -135,6 +85,8 @@ function animate() {
 function toggleUI() { showUI = !showUI; document.getElementById('controls').classList.toggle('hidden', !showUI); }
 function toggleDots() { showDots = !showDots; }
 function toggleFullScreen() { if(!document.fullscreenElement) document.documentElement.requestFullscreen(); else document.exitFullscreen(); }
-function resetPoints() { localStorage.removeItem('v40_final_save'); location.reload(); }
+function resetPoints() { localStorage.removeItem('v40_final'); location.reload(); }
 
-init();
+const saved = localStorage.getItem('v40_final');
+if(saved) { const d = JSON.parse(saved); layers.v1.pts = d.v1; layers.v2.pts = d.v2; }
+setupEvents(); setView('desktop'); animate();
