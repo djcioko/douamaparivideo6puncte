@@ -1,119 +1,143 @@
 const canvas = document.getElementById('canvas');
 const ctx = canvas.getContext('2d');
-const video = document.getElementById('sourceVideo');
-const uiLayer = document.getElementById('ui-layer');
-const videoInput = document.getElementById('videoInput');
+const v1 = document.getElementById('vid1');
+const v2 = document.getElementById('vid2');
+let backgroundImg = new Image();
 
-let points = [];
-let isDragging = false;
-let currentPoint = null;
+let showUI = true;
+let showDots = true;
 
-// Inițializare puncte: 0-2 (sus), 3-4 (mijloc laturi), 5-7 (jos)
-function initPoints() {
-    const w = window.innerWidth;
-    const h = window.innerHeight;
-    const pad = 100;
-
-    points = [
-        {x: pad, y: pad}, {x: w/2, y: pad}, {x: w-pad, y: pad}, // Sus
-        {x: pad, y: h/2},                   {x: w-pad, y: h/2}, // Mijloc
-        {x: pad, y: h-pad}, {x: w/2, y: h-pad}, {x: w-pad, y: h-pad} // Jos
-    ];
-    createHandles();
-}
-
-function createHandles() {
-    uiLayer.innerHTML = '';
-    points.forEach((p, i) => {
-        const div = document.createElement('div');
-        div.className = 'handle';
-        div.style.left = p.x + 'px';
-        div.style.top = p.y + 'px';
-        
-        div.onmousedown = (e) => {
-            isDragging = true;
-            currentPoint = i;
-        };
-        uiLayer.appendChild(div);
-    });
-}
-
-window.onmousemove = (e) => {
-    if (isDragging && currentPoint !== null) {
-        points[currentPoint].x = e.clientX;
-        points[currentPoint].y = e.clientY;
-        const handles = document.querySelectorAll('.handle');
-        handles[currentPoint].style.left = e.clientX + 'px';
-        handles[currentPoint].style.top = e.clientY + 'px';
+// 6 puncte per video, toate Cyan pentru vizibilitate
+let layers = {
+    v1: {
+        pts: [{x:150,y:150}, {x:350,y:150}, {x:550,y:150}, {x:150,y:400}, {x:350,y:400}, {x:550,y:400}],
+        active: false
+    },
+    v2: {
+        pts: [{x:650,y:150}, {x:850,y:150}, {x:1050,y:150}, {x:650,y:400}, {x:850,y:400}, {x:1050,y:400}],
+        active: false
     }
 };
 
-window.onmouseup = () => { isDragging = false; currentPoint = null; };
+function init() {
+    resize();
+    const saved = localStorage.getItem('v40_dual_mapper_v2');
+    if(saved) {
+        const data = JSON.parse(saved);
+        layers.v1.pts = data.v1;
+        layers.v2.pts = data.v2;
+    }
+    setupEvents();
+    requestAnimationFrame(animate);
+}
 
-// Logica de randare cu deformare prin subdiviziune
-function render() {
+function resize() {
     canvas.width = window.innerWidth;
     canvas.height = window.innerHeight;
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-    if (video.readyState >= 2) {
-        const vw = video.videoWidth;
-        const vh = video.videoHeight;
-
-        // Randăm video-ul în 4 sectoare folosind punctele noastre
-        // Sector 1 (Stânga Sus)
-        drawQuad(video, 0, 0, vw/2, vh/2, points[0], points[1], points[3], calculateCenter());
-        // Sector 2 (Dreapta Sus)
-        drawQuad(video, vw/2, 0, vw/2, vh/2, points[1], points[2], calculateCenter(), points[4]);
-        // Sector 3 (Stânga Jos)
-        drawQuad(video, 0, vh/2, vw/2, vh/2, points[3], calculateCenter(), points[5], points[6]);
-        // Sector 4 (Dreapta Jos)
-        drawQuad(video, vw/2, vh/2, vw/2, vh/2, calculateCenter(), points[4], points[6], points[7]);
-    }
-    requestAnimationFrame(render);
 }
 
-function calculateCenter() {
-    // Calculăm un punct central dinamic bazat pe media punctelor de pe margini
-    return {
-        x: (points[1].x + points[6].x + points[3].x + points[4].x) / 4,
-        y: (points[1].y + points[6].y + points[3].y + points[4].y) / 4
+function setupEvents() {
+    window.addEventListener('resize', resize);
+    
+    document.getElementById('bgInput').onchange = (e) => {
+        if(e.target.files[0]) backgroundImg.src = URL.createObjectURL(e.target.files[0]);
     };
+    document.getElementById('video1Input').onchange = (e) => {
+        if(e.target.files[0]) { v1.src = URL.createObjectURL(e.target.files[0]); v1.play(); layers.v1.active = true; }
+    };
+    document.getElementById('video2Input').onchange = (e) => {
+        if(e.target.files[0]) { v2.src = URL.createObjectURL(e.target.files[0]); v2.play(); layers.v2.active = true; }
+    };
+
+    let dragPt = null;
+    let dragLayer = null;
+    let lastMouse = {x:0, y:0};
+
+    canvas.onmousedown = (e) => {
+        if(!showDots) return;
+        const mouse = {x: e.clientX, y: e.clientY};
+        
+        // 1. Verificăm punctele de control
+        for (let key in layers) {
+            layers[key].pts.forEach(p => {
+                if(Math.hypot(p.x - mouse.x, p.y - mouse.y) < 25) dragPt = p;
+            });
+        }
+
+        // 2. Verificăm zona de mijloc pentru Drag Mutare (între puncte)
+        if(!dragPt) {
+            for (let key in layers) {
+                const p = layers[key].pts;
+                if(mouse.x > p[0].x && mouse.x < p[2].x && mouse.y > p[0].y && mouse.y < p[3].y) {
+                    dragLayer = layers[key];
+                }
+            }
+        }
+        lastMouse = mouse;
+    };
+
+    window.onmousemove = (e) => {
+        const mouse = {x: e.clientX, y: e.clientY};
+        if(dragPt) {
+            dragPt.x = mouse.x;
+            dragPt.y = mouse.y;
+        } else if(dragLayer) {
+            const dx = mouse.x - lastMouse.x;
+            const dy = mouse.y - lastMouse.y;
+            dragLayer.pts.forEach(p => { p.x += dx; p.y += dy; });
+        }
+        if(dragPt || dragLayer) {
+            lastMouse = mouse;
+            localStorage.setItem('v40_dual_mapper_v2', JSON.stringify({ v1: layers.v1.pts, v2: layers.v2.pts }));
+        }
+    };
+
+    window.onmouseup = () => { dragPt = null; dragLayer = null; };
 }
 
-// Funcție pentru desenarea unei felii de video deformată (Simplificată pentru performanță)
-function drawQuad(img, sx, sy, sw, sh, p1, p2, p3, p4) {
-    // În context 2D pur, folosim o aproximare prin transformări multiple
-    // Pentru un warping perfect de 8 puncte "curbe", WebGL ar fi pasul următor
+function drawVideoMesh(video, pts) {
+    if(video.readyState < 2) return;
+    
+    // Desenăm video folosind cliparea pe zona celor 6 puncte
     ctx.save();
     ctx.beginPath();
-    ctx.moveTo(p1.x, p1.y);
-    ctx.lineTo(p2.x, p2.y);
-    ctx.lineTo(p4.x, p4.y);
-    ctx.lineTo(p3.x, p3.y);
+    ctx.moveTo(pts[0].x, pts[0].y); ctx.lineTo(pts[1].x, pts[1].y); ctx.lineTo(pts[2].x, pts[2].y);
+    ctx.lineTo(pts[5].x, pts[5].y); ctx.lineTo(pts[4].x, pts[4].y); ctx.lineTo(pts[3].x, pts[3].y);
     ctx.closePath();
     ctx.clip();
     
-    // Calculăm o cutie de încadrare pentru acest cadran
-    const minX = Math.min(p1.x, p2.x, p3.x, p4.x);
-    const minY = Math.min(p1.y, p2.y, p3.y, p4.y);
-    const maxX = Math.max(p1.x, p2.x, p3.x, p4.x);
-    const maxY = Math.max(p1.y, p2.y, p3.y, p4.y);
+    const minX = Math.min(pts[0].x, pts[3].x);
+    const minY = Math.min(pts[0].y, pts[1].y);
+    const width = Math.max(pts[2].x, pts[5].x) - minX;
+    const height = Math.max(pts[3].y, pts[5].y) - minY;
     
-    ctx.drawImage(img, sx, sy, sw, sh, minX, minY, maxX - minX, maxY - minY);
+    ctx.drawImage(video, minX, minY, width, height);
     ctx.restore();
 }
 
-videoInput.onchange = (e) => {
-    const file = e.target.files[0];
-    if (file) {
-        video.src = URL.createObjectURL(file);
-        video.play();
+function animate() {
+    ctx.fillStyle = "black";
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    
+    if(backgroundImg.src) ctx.drawImage(backgroundImg, 0, 0, canvas.width, canvas.height);
+    
+    drawVideoMesh(v1, layers.v1.pts);
+    drawVideoMesh(v2, layers.v2.pts);
+    
+    if(showDots) {
+        for(let key in layers) {
+            layers[key].pts.forEach(p => {
+                ctx.fillStyle = '#00ffff'; ctx.beginPath(); ctx.arc(p.x, p.y, 12, 0, Math.PI*2); ctx.fill();
+                ctx.strokeStyle = 'white'; ctx.lineWidth = 2; ctx.stroke();
+            });
+        }
     }
-};
+    requestAnimationFrame(animate);
+}
 
-function resetPoints() { initPoints(); }
-function toggleUI() { uiLayer.style.display = uiLayer.style.display === 'none' ? 'block' : 'none'; }
+function toggleUI() { showUI = !showUI; document.getElementById('controls').classList.toggle('hidden', !showUI); }
+function toggleDots() { showDots = !showDots; }
+function toggleFullScreen() { if(!document.fullscreenElement) canvas.requestFullscreen(); else document.exitFullscreen(); }
+function resetPoints() { localStorage.removeItem('v40_dual_mapper_v2'); location.reload(); }
 
-initPoints();
-render();
+init();
